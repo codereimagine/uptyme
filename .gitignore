@@ -1,0 +1,19 @@
+# tooling — local-only, not shipped
+tools/
+node_modules/
+
+# build artifacts
+dist/
+coverage/
+*.tsbuildinfo
+# tsc emits these when building vite.config.ts via tsconfig.node.json (composite)
+vite.config.js
+vite.config.d.ts
+
+# design source (mockup + plan) — untracked artifacts in working dir
+uptyme-dual.html
+RDA-uptyme-v12*.html
+
+# os
+.DS_Store
+Thumbs.db

@@ -95,7 +95,9 @@ export function PlacesView({
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // Submission is implicit via debounced typing; suppress default form post.
+    // Search is implicit via debounced typing; Enter just dismisses the
+    // keyboard so the results are freely browsable (bewthr pattern).
+    inputRef.current?.blur();
   }
 
   function handlePick(r: GeocodingResult) {
@@ -130,9 +132,12 @@ export function PlacesView({
           ref={inputRef}
           type="search"
           inputMode="search"
+          enterKeyHint="search"
           autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
           spellCheck={false}
-          placeholder="Search city or town…"
+          placeholder="Search any city worldwide…"
           value={query}
           onChange={(e) => runSearch(e.currentTarget.value)}
         />
@@ -151,6 +156,9 @@ export function PlacesView({
       )}
 
       <div className="places-view-results" role="listbox" aria-label="Search results">
+        {!searchError && query.trim().length < 2 && (
+          <div className="places-view-status hint">Type 2 or more characters to search</div>
+        )}
         {searching && results.length === 0 && (
           <div className="places-view-status">searching…</div>
         )}
@@ -160,7 +168,7 @@ export function PlacesView({
           </div>
         )}
         {!searching && !searchError && query.trim().length >= 2 && results.length === 0 && (
-          <div className="places-view-status">no matches</div>
+          <div className="places-view-status">No results found</div>
         )}
         {results.map((r, i) => (
           <button

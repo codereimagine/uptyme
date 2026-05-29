@@ -547,8 +547,13 @@ body {
 .places-view-results {
   flex: 1 1 auto;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 6px 16px 20px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.places-view-results::-webkit-scrollbar { display: none; }
 .places-view-status {
   padding: 14px 4px;
   color: var(--dim);
@@ -557,6 +562,7 @@ body {
   letter-spacing: 1.5px;
 }
 .places-view-status.error { color: var(--red); }
+.places-view-status.hint { color: #3A3A55; }
 .places-view-result {
   display: block;
   width: 100%;

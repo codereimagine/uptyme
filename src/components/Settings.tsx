@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { usePwaUpdate } from '../lib/PwaUpdate';
 import {
   useSettings,
@@ -100,15 +101,51 @@ function UpdatesSection() {
 }
 
 interface SettingsProps {
+  open: boolean;
+  onClose: () => void;
   demo: boolean;
   onDemoChange: (on: boolean) => void;
 }
 
-export function Settings({ demo, onDemoChange }: SettingsProps) {
+// Settings is a full-screen OPAQUE view (same shell as PlacesView), not a
+// translucent draggable bottom sheet. The sheet-over-the-live-scaled-app forced
+// iOS to re-blend a full-screen translucent layer every drag frame — the cause
+// of the drag jank. A full-screen opaque view has nothing to blend and no drag,
+// so the jank is structurally impossible (matches the never-janky search view).
+export function Settings({ open, onClose, demo, onDemoChange }: SettingsProps) {
   const settings = useSettings();
 
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
   return (
-    <>
+    <div className={`places-view${open ? ' open' : ''}`} aria-hidden={!open}>
+      <div className="places-view-header">
+        <button
+          type="button"
+          className="places-view-icon-btn"
+          onClick={onClose}
+          aria-label="Back"
+        >
+          ←
+        </button>
+        <div className="places-view-title">SETTINGS</div>
+        <button
+          type="button"
+          className="places-view-icon-btn"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+      <div className="settings-view-body">
       <div className="settings-section">
         <div className="settings-section-title">Appearance</div>
         <ChipRow<Theme>
@@ -209,6 +246,7 @@ export function Settings({ demo, onDemoChange }: SettingsProps) {
           Reset all settings to defaults
         </button>
       </div>
-    </>
+      </div>
+    </div>
   );
 }

@@ -422,15 +422,27 @@ body {
   z-index: 200;
   background: #04040A;
   color: var(--text);
-  display: flex;
+  /* Closed = display:none, NOT opacity:0. An opacity:0 fixed full-screen layer
+     stays live in the compositor and iOS WebKit can leave a one-frame "ghost"
+     of its last content when it's hidden. display:none removes the element from
+     rendering entirely → no layer, no fade, no blend, no ghost. Pairs with the
+     instant (no-transition) open/close the user chose. */
+  display: none;
   flex-direction: column;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s ease-out;
+  /* Respect iOS safe-area insets (matches .stage-wrap). Without this the
+     full-screen overlay starts at viewport y=0, so its header's back/close
+     buttons sit UNDER the status bar / notch (beside the clock & battery) and
+     can't be tapped — the reported "can't go back or close the search" bug.
+     box-sizing:border-box (global reset) keeps the overlay full-bleed while
+     insetting its content. */
+  padding:
+    env(safe-area-inset-top, 0px)
+    env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
 }
 .places-view.open {
-  opacity: 1;
-  pointer-events: auto;
+  display: flex;
 }
 
 .places-view-header {
@@ -489,7 +501,11 @@ body {
   border-radius: 5px;
   color: var(--text-bright);
   font-family: inherit;
-  font-size: 14px;
+  /* 16px (not 14) — iOS Safari auto-zooms into any focused input whose
+     font-size is < 16px, then leaves the page zoomed so the user has to pinch
+     back. 16px disables that zoom WITHOUT resorting to user-scalable=no, which
+     would break pinch-zoom accessibility for everyone. */
+  font-size: 16px;
   padding: 11px 12px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -574,117 +590,20 @@ body {
   letter-spacing: 1px;
 }
 
-/* === Modal (iOS-safe bottom sheet, ported from bewthr) === */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.78);
-  z-index: 100;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
-.modal-backdrop.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-.modal {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  --drag-y: 0px;
-  transform: translateX(-50%) translateY(100%);
-  background: #0A0A14;
-  width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
-  max-height: 85dvh;
-  border-radius: 16px 16px 0 0;
-  z-index: 101;
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-  border: 1px solid var(--line);
-  border-bottom: none;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.modal::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--red), transparent);
-}
-.modal.open {
-  transform: translateX(-50%) translateY(var(--drag-y));
-}
-.modal-drag-zone {
-  touch-action: none;
-  cursor: grab;
-  user-select: none;
-  -webkit-user-select: none;
-  flex: 0 0 auto;
-}
-.modal-drag-zone:active { cursor: grabbing; }
-.modal-handle {
-  width: 60px;
-  height: 5px;
-  background: #3A3A55;
-  border-radius: 100px;
-  margin: 14px auto 4px;
-  opacity: 0.85;
-}
-.modal-header {
-  padding: 18px 20px 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.modal-title {
-  font-size: 14px;
-  font-weight: 700;
-  font-family: inherit;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--text-bright);
-}
-.modal-title::before {
-  content: '// ';
-  color: var(--red);
-}
-.modal-close {
-  background: transparent;
-  border: 1px solid var(--line);
-  color: var(--text);
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: inherit;
-  transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
-}
-.modal-close:hover {
-  color: var(--red);
-  border-color: var(--red);
-  box-shadow: 0 0 12px rgba(255, 45, 62, 0.25);
-}
-.modal-body {
-  padding: 0 20px 32px;
-  contain: content;
+/* === Settings view body === */
+/* The Settings view reuses the full-screen .places-view / .places-view-header
+   shell (opaque, safe-area-padded, no translucent backdrop, no drag) — the
+   architecture that never janks. This is just its scrollable content region. */
+.settings-view-body {
   flex: 1 1 auto;
+  padding: 0 16px 32px;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.modal-body::-webkit-scrollbar { display: none; }
+.settings-view-body::-webkit-scrollbar { display: none; }
 
 /* === Settings (chip rows, sections, reset — ported from bewthr) === */
 .settings-section {
@@ -935,18 +854,15 @@ body {
 :root.anim-reduce .star { animation-duration: 12s !important; }
 :root.anim-reduce .core .here::after { animation: none !important; }
 :root.anim-reduce .sky { transition: background 0.6s linear !important; }
-:root.anim-reduce .modal { transition: transform 0.15s ease !important; }
 :root.anim-reduce .orbit-body { transition: opacity 0.4s ease !important; }
 
 :root.anim-off .star { animation: none !important; }
 :root.anim-off .core .here::after { animation: none !important; }
 :root.anim-off .status-dot { animation: none !important; }
 :root.anim-off .sky { transition: none !important; }
-:root.anim-off .modal { transition: none !important; }
 :root.anim-off .orbit-body { transition: none !important; }
 :root.anim-off .icon-btn,
 :root.anim-off .mode-btn,
-:root.anim-off .modal-close,
 :root.anim-off .settings-chip,
 :root.anim-off .settings-reset,
 :root.anim-off .settings-update-check,

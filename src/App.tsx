@@ -3,7 +3,6 @@ import './uptyme.css';
 import { bandOf, skyColor, type Band } from './engine';
 import { Clock } from './faces/Clock';
 import { Orbit } from './faces/Orbit';
-import { Modal } from './components/Modal';
 import { PlacesView } from './components/PlacesView';
 import { Settings } from './components/Settings';
 import { UpdateBanner } from './components/UpdateBanner';
@@ -262,9 +261,12 @@ export function App() {
         title="SET SECOND CITY"
       />
 
-      <Modal open={settingsOpen} title="Settings" onClose={() => setSettingsOpen(false)}>
-        <Settings demo={demo} onDemoChange={setDemo} />
-      </Modal>
+      <Settings
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        demo={demo}
+        onDemoChange={setDemo}
+      />
     </>
   );
 }

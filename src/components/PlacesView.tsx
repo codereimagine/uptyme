@@ -110,7 +110,7 @@ export function PlacesView({
           type="button"
           className="places-view-icon-btn"
           onClick={onClose}
-          aria-label="Close"
+          aria-label="Back"
         >
           ←
         </button>

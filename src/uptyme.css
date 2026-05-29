@@ -566,21 +566,22 @@ body {
 .places-view-result {
   display: block;
   width: 100%;
-  background: transparent;
-  border: 1px solid transparent;
-  border-bottom: 1px solid var(--line);
+  background: #0A0A14;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 6px;
   color: var(--text);
   font-family: inherit;
   text-align: left;
-  padding: 12px 8px;
+  padding: 12px 14px;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s, border-color 0.12s, transform 0.12s;
 }
 .places-view-result:hover {
-  background: #0A0A14;
-  border-color: var(--line);
-  border-bottom-color: var(--red-soft);
+  background: #11111C;
+  border-color: var(--red);
 }
+.places-view-result:active { transform: scale(0.98); }
 .places-view-result-name {
   font-size: 13px;
   color: var(--text);

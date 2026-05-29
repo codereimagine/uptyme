@@ -7,15 +7,24 @@ export interface Place {
   country?: string;
   lat: number;
   lon: number;
+  /** IANA tz of this place; when set, the clock shows THIS city's local time. */
+  timezone?: string;
 }
 
 const STORAGE_KEY = 'uptyme.place';
 const SECOND_STORAGE_KEY = 'uptyme.place2';
 
+// The default/home place uses the DEVICE's IANA timezone so it shows correct
+// local time (DST-aware); searched cities carry their own tz from the geocoder.
+const DEVICE_TZ: string | undefined = (() => {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return undefined; }
+})();
+
 const DEFAULT_PLACE: Place = {
   name: 'default',
   lat: LAT_DEFAULT,
   lon: LON_DEFAULT,
+  timezone: DEVICE_TZ,
 };
 
 function isValidPlace(value: unknown): value is Place {
@@ -37,6 +46,7 @@ function normalizePlace(parsed: Place): Place {
     country: typeof parsed.country === 'string' ? parsed.country : undefined,
     lat: parsed.lat,
     lon: parsed.lon,
+    timezone: typeof parsed.timezone === 'string' ? parsed.timezone : undefined,
   };
 }
 

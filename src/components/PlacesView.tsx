@@ -21,6 +21,7 @@ function resultToPlace(r: GeocodingResult): Place {
     country: r.country,
     lat: r.latitude,
     lon: r.longitude,
+    timezone: r.timezone,
   };
 }
 

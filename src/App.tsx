@@ -12,9 +12,10 @@ import { useFitScale } from './hooks/useFitScale';
 import { usePlace } from './usePlace';
 import { useTicker } from './useTicker';
 
-function fmtTime(date: Date, format: TimeFormat): { time: string; mer: string } {
-  const h = date.getHours();
-  const m = date.getMinutes();
+// Show the time IN the selected place's timezone when known (so searching a
+// city shows that city's local time), falling back to the device's local time
+// for the default place or an unknown/invalid tz.
+function fmtParts(h: number, m: number, format: TimeFormat): { time: string; mer: string } {
   const mm = m < 10 ? `0${m}` : `${m}`;
   if (format === '24') {
     const hh = h < 10 ? `0${h}` : `${h}`;
@@ -24,6 +25,36 @@ function fmtTime(date: Date, format: TimeFormat): { time: string; mer: string } 
   let hh = h % 12;
   if (hh === 0) hh = 12;
   return { time: `${hh}:${mm}`, mer };
+}
+
+// Show the time IN the selected place. Source chain (no extra network — that
+// would break the zero-network lock): 1) the place's IANA timezone (exact,
+// DST-aware, from the geocoder / device for the default place); 2) a secure
+// LOCAL fallback derived from the city's longitude (offline, city-relative,
+// ~±1h on DST); 3) device-local time only if neither is available.
+function fmtTime(date: Date, format: TimeFormat, timeZone?: string, lon?: number): { time: string; mer: string } {
+  if (timeZone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hour: format === '12' ? 'numeric' : '2-digit',
+        minute: '2-digit',
+        hour12: format === '12',
+        hourCycle: format === '24' ? 'h23' : undefined,
+      }).formatToParts(date);
+      const hour = parts.find((p) => p.type === 'hour')?.value ?? '';
+      const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
+      const dp = parts.find((p) => p.type === 'dayPeriod')?.value ?? '';
+      if (hour) return { time: `${hour}:${minute}`, mer: format === '12' ? dp.toUpperCase() : '' };
+    } catch {
+      // invalid tz → longitude fallback below
+    }
+  }
+  if (typeof lon === 'number' && Number.isFinite(lon)) {
+    const shifted = new Date(date.getTime() + Math.round(lon / 15) * 3_600_000);
+    return fmtParts(shifted.getUTCHours(), shifted.getUTCMinutes(), format);
+  }
+  return fmtParts(date.getHours(), date.getMinutes(), format);
 }
 
 function fmtCoord(lat: number, lon: number): string {
@@ -89,7 +120,7 @@ export function App() {
   const fitScale = useFitScale(stageRef);
 
   const phoneBg = frame ? skyColor(frame.sun.alt) : '#04040A';
-  const t = frame ? fmtTime(frame.now, timeFormat) : null;
+  const t = frame ? fmtTime(frame.now, timeFormat, place.timezone, place.lon) : null;
   const band = frame ? bandOf(frame.sun.alt) : null;
 
   // Keep the browser UI (Chrome's toolbar / status-bar tint on iOS + Android)

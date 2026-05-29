@@ -8,6 +8,8 @@ export interface GeocodingResult {
   country?: string;
   latitude: number;
   longitude: number;
+  /** IANA tz (e.g. "America/Belize") — open-meteo returns it per result; used to show the city's LOCAL time. */
+  timezone?: string;
 }
 
 interface GeocodingResponse {

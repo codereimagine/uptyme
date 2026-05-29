@@ -563,27 +563,29 @@ body {
 }
 .places-view-status.error { color: var(--red); }
 .places-view-status.hint { color: #3A3A55; }
+/* card rows — ported faithfully from starnav's proven bewthr search:
+   translucent surface (NOT near-black), 9px radius, spacing, 15px name. */
 .places-view-result {
   display: block;
   width: 100%;
-  background: transparent;
-  border: 1px solid transparent;
-  border-bottom: 1px solid var(--line);
+  text-align: left;
+  background: rgba(20, 20, 31, 0.5);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  margin-bottom: 4px;
   color: var(--text);
   font-family: inherit;
-  text-align: left;
-  padding: 12px 8px;
+  padding: 12px 13px;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
 }
 .places-view-result:hover {
-  background: #0A0A14;
-  border-color: var(--line);
-  border-bottom-color: var(--red-soft);
+  background: rgba(28, 28, 40, 0.7);
+  border-color: var(--red);
 }
 .places-view-result-name {
-  font-size: 13px;
-  color: var(--text);
+  font-size: 15px;
+  color: var(--text-bright);
   margin-bottom: 3px;
 }
 .places-view-result-name b {
@@ -593,7 +595,8 @@ body {
 .places-view-result-coord {
   font-size: 10px;
   color: var(--dim);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* === Settings view body === */

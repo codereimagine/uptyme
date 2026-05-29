@@ -13,6 +13,12 @@
   --moon-core: #D6E2FF;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* Global scroll lockdown (bewthr gold standard): hide the page scrollbar and
+   stop overscroll/rubber-band chaining. A fit-to-screen instrument should never
+   show a page scroll line or let a full-screen overlay be dragged past itself. */
+html, body { overscroll-behavior: none; }
+html { scrollbar-width: none; -ms-overflow-style: none; }
+html::-webkit-scrollbar { display: none; }
 body {
   background: #04040A;
   color: var(--text);
@@ -429,6 +435,10 @@ body {
      instant (no-transition) open/close the user chose. */
   display: none;
   flex-direction: column;
+  /* Clip the overlay to its own bounds so it can never be scrolled or dragged
+     past itself — only the inner results/saved lists scroll (scrollbars hidden,
+     overscroll contained). Pairs with the global lockdown above. */
+  overflow: hidden;
   /* Respect iOS safe-area insets (matches .stage-wrap). Without this the
      full-screen overlay starts at viewport y=0, so its header's back/close
      buttons sit UNDER the status bar / notch (beside the clock & battery) and

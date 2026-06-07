@@ -6,8 +6,10 @@
 //   moonPhase — Meeus ch. 49 true new- and full-moon instants, tol ±0.02
 //   bandOf    — 4-band thresholds from uptyme-dual.html source-of-truth
 
-export const LAT_DEFAULT = 40.21;
-export const LON_DEFAULT = -74.04;
+// Greenwich — the canonical zero-meridian. Used only as a no-geolocation fallback;
+// the runtime asks for geolocation on first paint to find the actual user.
+export const LAT_DEFAULT = 51.4779;
+export const LON_DEFAULT = -0.0015;
 
 const RAD = Math.PI / 180;
 const J2000_NOON_MS = Date.UTC(2000, 0, 1, 12);

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LAT_DEFAULT, LON_DEFAULT } from './engine';
 
 export interface Place {
@@ -93,6 +93,35 @@ export interface UsePlaceResult {
 export function usePlace(): UsePlaceResult {
   const [place, setPlaceState] = useState<Place>(readPersistedPlace);
   const [second, setSecondState] = useState<Place | null>(readPersistedSecond);
+
+  // First-paint geolocation: if the active place is still the default
+  // (i.e., the user has never set one), ask the browser for the device's
+  // coordinates and update IN-MEMORY ONLY. We do NOT persist these — the
+  // saved place stays "default" until the user explicitly searches a city.
+  // No network: the geolocation API is local; no reverse-geocode is issued.
+  useEffect(() => {
+    if (place.name !== 'default') return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return;
+        setPlaceState({
+          name: 'default',
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          timezone: DEVICE_TZ,
+        });
+      },
+      () => {
+        // Permission denied / unavailable: keep Greenwich-derived default.
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [place.name]);
 
   const setPlace = useCallback((next: Place) => {
     setPlaceState(next);

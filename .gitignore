@@ -17,3 +17,8 @@ RDA-uptyme-v12*.html
 # os
 .DS_Store
 Thumbs.db
+
+# dev screenshots + mockups (kept locally, never shipped)
+*.png
+!docs/screenshots/*.png
+*-mockup.html

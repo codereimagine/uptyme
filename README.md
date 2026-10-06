@@ -4,6 +4,8 @@
 
 ### A watch for your place on Earth — real sun, moon, and time, computed on your device.
 
+*No accounts, no trackers, no ads — private by design.*
+
 **▶ Live — [codereimagine.github.io/uptyme](https://codereimagine.github.io/uptyme/)**
 
 <p>
@@ -12,6 +14,12 @@
 </p>
 
 <sub>The watch face floating in a full-bleed starfield — solar altitude, your coordinates, an optional second city.</sub>
+
+<br>
+
+<img src="docs/screenshots/lighthouse.png" width="78%" alt="Lighthouse desktop audit — Performance 100, Accessibility 100, Best Practices 100, SEO 100" />
+
+<sub><b>Lighthouse (desktop) — 100 · 100 · 100 · 100</b></sub>
 
 **By Bert Peters** · the **time** axis of [codereimagine](https://github.com/codereimagine).
 
@@ -28,7 +36,7 @@ A watch as the primary instrument: your local time with the sun's real position 
 - **Optional second city.** Pin one more place beneath the face. Search any city worldwide; the result carries its own IANA timezone, so the readout stays DST-correct.
 - **Atmospheric starfield.** Full-bleed, the instrument floats and scales to fit any screen.
 - **Installable PWA.** Works offline once cached.
-- **Local-first by lock.** Zero runtime network for the watch itself. The only outbound call in the whole app is the city search you explicitly trigger.
+- **Private by design — no accounts, no trackers, no ads.** Zero runtime network for the watch itself; the only outbound call in the whole app is the city search you explicitly trigger. Nothing about you leaves your device.
 
 ## How it computes — all local, no network
 

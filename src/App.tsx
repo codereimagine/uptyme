@@ -272,7 +272,7 @@ export function App() {
         </div>
 
         <div className="foot">
-          up<span className="a">tyme</span> v0.1 · open source
+          up<span className="a">tyme</span>
         </div>
       </div>
       </div>

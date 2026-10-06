@@ -5,8 +5,6 @@ import {
   bandOf,
   skyColor,
   createTicker,
-  LAT_DEFAULT,
-  LON_DEFAULT,
   TICK_MS_REAL,
   TICK_MS_DEMO,
 } from './engine';
@@ -21,17 +19,22 @@ function wrapDelta(c: number, r: number): number {
 
 describe('P1.1 sunCalc — NOAA fixture (Meeus ch. 25)', () => {
   const fixture = new Date(Date.UTC(2026, 4, 26, 16, 0, 0));
+  // Reference computed at the fixture location (central NJ). Pinned explicitly so this
+  // validates the sunCalc MATH independent of the app's default location — which moved to
+  // Greenwich in 875dfb7, and that location move (not any math change) is what broke this test.
+  const REF_LAT = 40.21;
+  const REF_LON = -74.04;
   const REF_ALT = 67.8757;
   const REF_AZ = 145.2497;
   const TOL = 0.5;
 
   it('alt within ±0.5° of NOAA reference', () => {
-    const r = sunCalc(fixture, LAT_DEFAULT, LON_DEFAULT);
+    const r = sunCalc(fixture, REF_LAT, REF_LON);
     expect(Math.abs(r.alt - REF_ALT)).toBeLessThanOrEqual(TOL);
   });
 
   it('az within ±0.5° of NOAA reference', () => {
-    const r = sunCalc(fixture, LAT_DEFAULT, LON_DEFAULT);
+    const r = sunCalc(fixture, REF_LAT, REF_LON);
     expect(Math.abs(r.az - REF_AZ)).toBeLessThanOrEqual(TOL);
   });
 });

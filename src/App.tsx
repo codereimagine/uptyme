@@ -103,7 +103,7 @@ function genStars(count: number): Star[] {
 }
 
 export function App() {
-  const { place, setPlace, second, setSecond, clearSecond } = usePlace();
+  const { place, setPlace, second, setSecond, clearSecond, locate, located } = usePlace();
   const { timeFormat, refreshSeconds } = useSettings();
   const { frame, demo, setDemo } = useTicker(
     false,
@@ -224,7 +224,9 @@ export function App() {
             <div className="solar">
               SOLAR · alt {frame ? frame.sun.alt.toFixed(0) : '—'}°
             </div>
-            <div className="here">◎ YOU ARE HERE</div>
+            <button type="button" className="here" onClick={locate}>
+              ◎ {located ? 'YOU ARE HERE' : 'TAP TO LOCATE'}
+            </button>
           </div>
         </div>
 

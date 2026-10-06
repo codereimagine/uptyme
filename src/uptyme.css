@@ -270,6 +270,17 @@ body {
   margin-top: 10px;
   border: 1px solid var(--line);
   padding: 3px 8px;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  pointer-events: auto;   /* .core is pointer-events:none (keeps the orbit live); re-enable on the button */
+  transition: color 0.15s, border-color 0.15s;
+}
+.core .here:hover,
+.core .here:focus-visible {
+  color: var(--red);
+  border-color: var(--red);
+  outline: none;
 }
 @keyframes corePulse {
   0%, 100% { opacity: .4; transform: scale(1); }

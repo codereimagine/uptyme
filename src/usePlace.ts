@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { LAT_DEFAULT, LON_DEFAULT } from './engine';
 
 export interface Place {
@@ -81,6 +81,10 @@ export interface UsePlaceResult {
   second: Place | null;
   setSecond: (next: Place) => void;
   clearSecond: () => void;
+  /** Request device geolocation. Tap-gated — never auto-called on load. */
+  locate: () => void;
+  /** True once the user has located this session (coords in memory only). */
+  located: boolean;
 }
 
 /**
@@ -93,35 +97,31 @@ export interface UsePlaceResult {
 export function usePlace(): UsePlaceResult {
   const [place, setPlaceState] = useState<Place>(readPersistedPlace);
   const [second, setSecondState] = useState<Place | null>(readPersistedSecond);
+  const [located, setLocated] = useState(false);
 
-  // First-paint geolocation: if the active place is still the default
-  // (i.e., the user has never set one), ask the browser for the device's
-  // coordinates and update IN-MEMORY ONLY. We do NOT persist these — the
-  // saved place stays "default" until the user explicitly searches a city.
-  // No network: the geolocation API is local; no reverse-geocode is issued.
-  useEffect(() => {
-    if (place.name !== 'default') return;
+  // Geolocation is TAP-GATED: we never auto-request on load. Auto-requesting
+  // prompts for a permission without a user gesture (a "geolocation-on-start"
+  // best-practice flag) — instead the user taps "TAP TO LOCATE" to call
+  // locate(). Coords are IN-MEMORY ONLY (not persisted; the saved place stays
+  // "default"). No network: the geolocation API is local, no reverse-geocode.
+  const locate = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return;
-    let cancelled = false;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        if (cancelled) return;
         setPlaceState({
           name: 'default',
           lat: pos.coords.latitude,
           lon: pos.coords.longitude,
           timezone: DEVICE_TZ,
         });
+        setLocated(true);
       },
       () => {
         // Permission denied / unavailable: keep Greenwich-derived default.
       },
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
     );
-    return () => {
-      cancelled = true;
-    };
-  }, [place.name]);
+  }, []);
 
   const setPlace = useCallback((next: Place) => {
     setPlaceState(next);
@@ -150,5 +150,5 @@ export function usePlace(): UsePlaceResult {
     }
   }, []);
 
-  return { place, setPlace, second, setSecond, clearSecond };
+  return { place, setPlace, second, setSecond, clearSecond, locate, located };
 }

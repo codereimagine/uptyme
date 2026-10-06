@@ -1,93 +1,59 @@
+<div align="center">
+
 # uptyme
 
-A watch. The **time** axis of codereimagine.
+### A watch for your place on Earth — real sun, moon, and time, computed on your device.
 
-Live: [codereimagine.github.io/uptyme](https://codereimagine.github.io/uptyme/)
+**▶ Live — [codereimagine.github.io/uptyme](https://codereimagine.github.io/uptyme/)**
 
-By **Bert Peters**.
+<p>
+  <img src="docs/screenshots/watch-mobile.png" width="30%" alt="uptyme on mobile — watch face in a starfield with solar altitude and coordinates" />
+  <img src="docs/screenshots/watch-desktop.png" width="58%" alt="uptyme on desktop — watch face with an optional second-city readout" />
+</p>
 
-## Screenshots
+<sub>The watch face floating in a full-bleed starfield — solar altitude, your coordinates, an optional second city.</sub>
 
-<table>
-  <tr>
-    <th>Mobile</th>
-    <th>Desktop</th>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/watch-mobile.png" alt="uptyme — mobile" width="280"></td>
-    <td><img src="docs/screenshots/watch-desktop.png" alt="uptyme — desktop" width="500"></td>
-  </tr>
-  <tr>
-    <td colspan="2"><sub>Watch face floating in a full-bleed starfield. Solar altitude, "you are here" coords, optional second-city readout.</sub></td>
-  </tr>
-</table>
+**By Bert Peters** · the **time** axis of [codereimagine](https://github.com/codereimagine).
 
-> Screenshots above are captured against `npm run preview` with a demo geolocation (Belize). Re-capture after UI changes — see `scripts/` or run Playwright against the preview server.
+</div>
+
+---
+
+A watch as the primary instrument: your local time with the sun's real position for your exact place — all computed on-device, no servers. Two faces: **Orbit** (the sun around your horizon) and **Clock** (a classic dial).
 
 ## What it does
 
-- **A watch.** Your local time, presented as the primary instrument. Two faces: **Orbit** (sun position around the horizon) and **Clock** (classic dial).
-- **Geolocation on first paint.** First load asks the browser for your coordinates so the watch knows where you are. No network is involved — the geolocation API is a local browser primitive. Deny it and you get Greenwich (the canonical zero-meridian) as a fallback.
-- **Optional second city.** Pin one elsewhere place beneath the face. Search any city worldwide; the result carries its own IANA timezone so the readout stays DST-correct.
-- **Atmospheric starfield.** Full-bleed, the instrument floats and scales-to-fit.
+- **A watch, geolocated.** First load asks the browser for your coordinates so the watch knows where you are — the geolocation API is a local browser primitive, no network. Deny it and you get Greenwich (the zero meridian) as a graceful fallback.
+- **Two faces.** *Orbit* shows the sun's position around the horizon; *Clock* is a classic dial. Your local time is always the headline.
+- **Optional second city.** Pin one more place beneath the face. Search any city worldwide; the result carries its own IANA timezone, so the readout stays DST-correct.
+- **Atmospheric starfield.** Full-bleed, the instrument floats and scales to fit any screen.
 - **Installable PWA.** Works offline once cached.
-- **Local-first by lock.** Zero runtime network for the watch itself. The only network call in the entire app is the geocoding search you explicitly trigger.
+- **Local-first by lock.** Zero runtime network for the watch itself. The only outbound call in the whole app is the city search you explicitly trigger.
 
-## Data sources
+## How it computes — all local, no network
 
-- **Sun position + altitude + bands**: NOAA Solar Position Algorithm (Meeus chapter 25), implemented locally in `src/engine.ts`. Verified byte-faithful against the vanilla harness it ports from. **No network.**
-- **Moon phase**: Meeus chapter 49, true new- and full-moon instants, also in `src/engine.ts`. **No network.**
-- **Timezone math**: device `Intl.DateTimeFormat` for the default place; for searched cities, the IANA tz returned by the geocoder. **No network at watch time.**
-- **City search (explicit, user-triggered only)**: [Open-Meteo geocoding](https://open-meteo.com/en/docs/geocoding-api) (keyless). Used by `src/lib/geocode.ts` only when the user types in the second-city search.
+- **Sun position, altitude & bands** — NOAA Solar Position Algorithm (Meeus ch. 25), implemented in `src/engine.ts`, verified byte-faithful against the reference harness it ports from.
+- **Moon phase** — Meeus ch. 49, true new/full-moon instants, also in `src/engine.ts`.
+- **Timezone math** — the device's `Intl.DateTimeFormat` for your place; for searched cities, the IANA zone the geocoder returns.
+- **City search (only when you type it)** — [Open-Meteo geocoding](https://open-meteo.com/en/docs/geocoding-api), keyless. The single outbound fetch in the app, in `src/lib/geocode.ts`.
 
-## Stack
+## Tech
 
-React 18 · Vite · TypeScript · vite-plugin-pwa (Workbox) · Vitest.
+React 18 · Vite · TypeScript · `vite-plugin-pwa` (Workbox) · Vitest. A PWA — installable and offline-capable.
 
-## Develop
+## Run it locally
 
 ```sh
 npm install
 npm run dev       # http://localhost:5173
 npm run build     # tsc -b && vite build
-npm run preview   # serves the production bundle
-npm run test
+npm run preview   # serve the production bundle
+npm run test      # Vitest — includes the Meeus/NOAA verification
 ```
 
-## Project layout
+## The codereimagine trilogy
 
-```
-src/
-  faces/                # watch faces
-    Clock.tsx           # classic dial
-    Orbit.tsx           # sun-around-horizon view
-  components/
-    PlacesView.tsx      # second-city search panel
-    Settings.tsx        # settings UI (face, time format, units, atmosphere)
-    UpdateBanner.tsx    # SW update prompt
-  hooks/
-    useFitScale.ts      # scale-to-fit the instrument
-    useVisualViewport.ts
-  lib/
-    geocode.ts          # Open-Meteo city search (only outbound fetch in the app)
-    PwaUpdate.tsx       # registerSW wrapper
-  store/
-    settings.ts         # zustand store (persisted)
-  engine.ts             # sun + moon math, pure-local
-  engine.test.ts        # Meeus / NOAA verification
-  usePlace.ts           # active place + optional second place
-  useMode.ts            # which face is showing
-  useTicker.ts          # rAF loop driving the dial
-  App.tsx
-  main.tsx
-public/                 # PWA manifest + icons
-docs/
-  screenshots/          # README images
-```
-
-## Related
-
-uptyme is one of three axes of codereimagine:
+uptyme is one of three axes of [codereimagine](https://github.com/codereimagine):
 
 - **[bewthr](https://github.com/codereimagine/bewthr)** — continuum (weather)
 - **uptyme** — time
@@ -95,4 +61,4 @@ uptyme is one of three axes of codereimagine:
 
 ## License
 
-Apache License 2.0 — see [LICENSE](./LICENSE).
+Apache-2.0.

@@ -271,10 +271,11 @@ export function App() {
           </div>
         </div>
 
-        <div className="foot">
-          up<span className="a">tyme</span>
-        </div>
       </div>
+      </div>
+
+      <div className="foot">
+        up<span className="a">tyme</span>
       </div>
 
       <PlacesView

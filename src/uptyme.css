@@ -402,13 +402,16 @@ body {
 }
 
 .foot {
-  position: relative;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   z-index: 4;
   text-align: center;
-  padding: 18px 18px 0;
   color: var(--dim);
   font-size: 10px;
   letter-spacing: 0.5px;
+  pointer-events: none;
 }
 .foot .a { color: var(--red); }
 

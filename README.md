@@ -15,12 +15,6 @@
 
 <sub>The watch face floating in a full-bleed starfield — solar altitude, your coordinates, an optional second city.</sub>
 
-<br>
-
-<img src="docs/screenshots/lighthouse.png" width="78%" alt="Lighthouse desktop audit — Performance 100, Accessibility 100, Best Practices 100, SEO 100" />
-
-<sub><b>Lighthouse (desktop) — 100 · 100 · 100 · 100</b></sub>
-
 **By Bert Peters** · the **time** axis of [codereimagine](https://github.com/codereimagine).
 
 </div>

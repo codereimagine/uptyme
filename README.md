@@ -61,6 +61,10 @@ uptyme is one of three axes of [codereimagine](https://github.com/codereimagine)
 - **uptyme** — time
 - **[starnav](https://github.com/codereimagine/starnav)** — space
 
+## Credits
+
+Built with [Claude Code](https://claude.com/claude-code).
+
 ## License
 
-Apache-2.0.
+[Apache-2.0](LICENSE).

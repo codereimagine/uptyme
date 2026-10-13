@@ -7,7 +7,7 @@
 //   bandOf    — 4-band thresholds from uptyme-dual.html source-of-truth
 
 // Greenwich — the canonical zero-meridian. Used only as a no-geolocation fallback;
-// the runtime asks for geolocation on first paint to find the actual user.
+// the runtime asks for geolocation only when the user taps "locate" (never on load).
 export const LAT_DEFAULT = 51.4779;
 export const LON_DEFAULT = -0.0015;
 

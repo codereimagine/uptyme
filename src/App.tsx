@@ -121,7 +121,8 @@ export function App() {
   const [secondOpen, setSecondOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
-  const fitScale = useFitScale(stageRef);
+  const footRef = useRef<HTMLDivElement>(null);
+  const fitScale = useFitScale(stageRef, footRef);   // fit the stage ABOVE the fixed footer
 
   const phoneBg = frame ? skyColor(frame.sun.alt) : '#04040A';
   const t = frame ? fmtTime(frame.now, timeFormat, place.timezone, place.lon) : null;
@@ -313,7 +314,7 @@ export function App() {
       </div>
       </div>
 
-      <div className="foot">
+      <div className="foot" ref={footRef}>
         up<span className="a">tyme</span>
       </div>
 

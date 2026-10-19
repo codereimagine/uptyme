@@ -1,6 +1,9 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
 import { useVisualViewport } from './useVisualViewport';
 
+/** Breathing room (px) between the fitted stage and the element it must stay above. */
+const FOOTER_GAP = 8;
+
 /**
  * Scale-to-fit: returns the factor that makes `ref`'s natural (untransformed)
  * box fit inside the visible viewport, capped at 1 (scale-DOWN only — keeps
@@ -12,7 +15,13 @@ import { useVisualViewport } from './useVisualViewport';
  * transform doesn't feed back into the measurement. Recomputes on
  * visual-viewport changes (browser chrome / keyboard) and on content resize.
  */
-export function useFitScale(ref: RefObject<HTMLElement | null>): number {
+export function useFitScale(
+  ref: RefObject<HTMLElement | null>,
+  /** Optional element the stage must stay ABOVE (the fixed footer wordmark). Without
+   *  it the stage was fitted to the full height, so in landscape the footer printed
+   *  over the bottom readouts. */
+  above?: RefObject<HTMLElement | null>,
+): number {
   const vv = useVisualViewport();
   const [scale, setScale] = useState(1);
 
@@ -22,7 +31,14 @@ export function useFitScale(ref: RefObject<HTMLElement | null>): number {
 
     const compute = () => {
       const availW = vv.width || window.innerWidth;
-      const availH = vv.height || window.innerHeight;
+      let availH = vv.height || window.innerHeight;
+      const limit = above?.current;
+      if (limit) {
+        // room between the stage's top (it's top-aligned; scale keeps its top
+        // fixed) and the footer's top, less a small breathing gap
+        const top = el.getBoundingClientRect().top;
+        availH = Math.min(availH, limit.getBoundingClientRect().top - FOOTER_GAP) - top;
+      }
       const natW = el.offsetWidth;
       const natH = el.offsetHeight;
       if (!natW || !natH || !availW || !availH) return;
@@ -37,7 +53,7 @@ export function useFitScale(ref: RefObject<HTMLElement | null>): number {
       ro.disconnect();
       window.removeEventListener('resize', compute);
     };
-  }, [ref, vv.width, vv.height]);
+  }, [ref, above, vv.width, vv.height]);
 
   return scale;
 }

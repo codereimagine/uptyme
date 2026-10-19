@@ -103,7 +103,7 @@ function genStars(count: number): Star[] {
 }
 
 export function App() {
-  const { place, setPlace, second, setSecond, clearSecond, locate, located, geoError } = usePlace();
+  const { place, setPlace, second, setSecond, clearSecond, locate, located, locating, geoError } = usePlace();
   const { timeFormat, refreshSeconds } = useSettings();
   const { frame, demo, setDemo } = useTicker(
     false,
@@ -230,9 +230,13 @@ export function App() {
               onClick={locate}
               title={geoError === 'denied' ? 'Location is blocked for this browser. Allow it in Settings (iOS: Settings › Chrome/Safari › Location), then tap again.' : undefined}
             >
-              ◎ {located
+              ◎ {locating
+                ? 'LOCATING…'
+                : located
                 ? 'YOU ARE HERE'
-                : geoError === 'denied'
+                : geoError === 'noresponse'
+                  ? 'NO RESPONSE · USE + FOR CITY'
+                  : geoError === 'denied'
                   ? 'LOCATION OFF · CHECK SETTINGS'
                   : geoError === 'unavailable'
                     ? 'NO FIX · TAP TO RETRY'

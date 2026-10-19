@@ -85,10 +85,19 @@ export interface UsePlaceResult {
   locate: () => void;
   /** True once the user has located this session (coords in memory only). */
   located: boolean;
+  /** True from the tap until the browser answers (or the watchdog gives up). */
+  locating: boolean;
   /** Why the last locate() failed — 'denied' (blocked for this browser/site,
-   *  the OS won't re-prompt) or 'unavailable' (no fix / timeout). null = no error. */
-  geoError: 'denied' | 'unavailable' | null;
+   *  the OS won't re-prompt), 'unavailable' (no fix / timeout) or 'noresponse'
+   *  (the browser never called back — seen on Chrome iOS). null = no error. */
+  geoError: GeoError | null;
 }
+
+export type GeoError = 'denied' | 'unavailable' | 'noresponse';
+
+/** Our own deadline: the API's `timeout` only starts once permission resolves,
+ *  so a request whose permission never resolves would otherwise hang forever. */
+const LOCATE_WATCHDOG_MS = 12000;
 
 /**
  * Uptyme is a single-location instrument — one place's sky drives the dial.
@@ -101,7 +110,8 @@ export function usePlace(): UsePlaceResult {
   const [place, setPlaceState] = useState<Place>(readPersistedPlace);
   const [second, setSecondState] = useState<Place | null>(readPersistedSecond);
   const [located, setLocated] = useState(false);
-  const [geoError, setGeoError] = useState<'denied' | 'unavailable' | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<GeoError | null>(null);
 
   // Geolocation is TAP-GATED: we never auto-request on load. Auto-requesting
   // prompts for a permission without a user gesture (a "geolocation-on-start"
@@ -113,8 +123,18 @@ export function usePlace(): UsePlaceResult {
       setGeoError('unavailable');
       return;
     }
+    setLocating(true);
+    setGeoError(null);
+    let answered = false;
+    const watchdog = setTimeout(() => {
+      if (answered) return;
+      setLocating(false);
+      setGeoError('noresponse');
+    }, LOCATE_WATCHDOG_MS);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        answered = true;
+        clearTimeout(watchdog);
         setPlaceState({
           name: 'default',
           lat: pos.coords.latitude,
@@ -122,9 +142,13 @@ export function usePlace(): UsePlaceResult {
           timezone: DEVICE_TZ,
         });
         setLocated(true);
+        setLocating(false);
         setGeoError(null);
       },
       (err) => {
+        answered = true;
+        clearTimeout(watchdog);
+        setLocating(false);
         // Keep the Greenwich-derived default, but say WHY so the tap isn't a
         // silent dead end. Once denied, the browser won't prompt again — the
         // user has to re-allow location in OS/browser settings.
@@ -164,5 +188,5 @@ export function usePlace(): UsePlaceResult {
     }
   }, []);
 
-  return { place, setPlace, second, setSecond, clearSecond, locate, located, geoError };
+  return { place, setPlace, second, setSecond, clearSecond, locate, located, locating, geoError };
 }

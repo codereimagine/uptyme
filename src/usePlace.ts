@@ -4,9 +4,9 @@ import {
   acquireLocation,
   clearStoredGeo,
   geoPermissionGranted,
-  readGeoAuto,
+  readGeoEnabled,
   readStoredGeo,
-  writeGeoAuto,
+  writeGeoEnabled,
   writeStoredGeo,
   type GeoFix,
 } from './geo';
@@ -91,18 +91,18 @@ export interface UsePlaceResult {
   second: Place | null;
   setSecond: (next: Place) => void;
   clearSecond: () => void;
-  /** Locate now: GPS, else approximate network location. Tap-gated (or the
-   *  Settings switch to AUTO). No-op in MANUAL mode. */
+  /** One-tap locate (same as bewthr): turns location ON if it's off, else
+   *  re-acquires — GPS, else approximate network location. Tap-gated. */
   locate: () => void;
   /** The location fix currently driving the dial, or null (Greenwich / a city). */
   fix: GeoFix | null;
   /** True from the tap until a fix arrives or both sources fail. */
   locating: boolean;
-  /** True when the last AUTO attempt got neither GPS nor a network location. */
+  /** True when the last attempt got neither GPS nor a network location. */
   locateFailed: boolean;
-  /** AUTO (GPS → network fallback) or MANUAL (kill switch: city search only). */
-  geoAuto: boolean;
-  setGeoAuto: (auto: boolean) => void;
+  /** ON (GPS → network fallback) or OFF (kill switch: city search only). */
+  geoEnabled: boolean;
+  setGeoEnabled: (on: boolean) => void;
 }
 
 /** A location fix drives the dial as the unnamed "default" place in device tz. */
@@ -110,11 +110,11 @@ function fixToPlace(fix: GeoFix): Place {
   return { name: 'default', lat: fix.lat, lon: fix.lon, timezone: DEVICE_TZ };
 }
 
-/** A picked city (name !== 'default') always wins; otherwise, in AUTO, the
+/** A picked city (name !== 'default') always wins; otherwise, in ON, the
  *  last-known fix loads instantly (like bewthr), else Greenwich. */
 function initialLocation(): { place: Place; fix: GeoFix | null } {
   const persisted = readPersistedPlace();
-  if (persisted.name !== 'default' || !readGeoAuto()) return { place: persisted, fix: null };
+  if (persisted.name !== 'default' || !readGeoEnabled()) return { place: persisted, fix: null };
   const fix = readStoredGeo();
   return fix ? { place: fixToPlace(fix), fix } : { place: persisted, fix: null };
 }
@@ -124,8 +124,8 @@ function initialLocation(): { place: Place; fix: GeoFix | null } {
  * `place` is that active location. `second` is an optional reference point
  * (name + lat/long readout under the instrument); it never drives the engine,
  * it's just an "elsewhere" marker. Both persist to localStorage. Network use is
- * the geocoding search the user triggers, plus — in AUTO only, when GPS fails —
- * the approximate network-location fallback (see ./geo.ts). MANUAL sends nothing.
+ * the geocoding search the user triggers, plus — only when ON and GPS fails —
+ * the approximate network-location fallback (see ./geo.ts). OFF sends nothing.
  */
 export function usePlace(): UsePlaceResult {
   const [init] = useState(initialLocation);
@@ -134,11 +134,14 @@ export function usePlace(): UsePlaceResult {
   const [second, setSecondState] = useState<Place | null>(readPersistedSecond);
   const [locating, setLocating] = useState(false);
   const [locateFailed, setLocateFailed] = useState(false);
-  const [geoAuto, setGeoAutoState] = useState(readGeoAuto);
+  const [geoEnabled, setGeoEnabledState] = useState(readGeoEnabled);
 
   // Most recent choice wins: a fix replaces a picked city (the city is dropped
   // from storage so the fix also wins on the next load).
+  // The single chokepoint for saving a fix: re-check the switch here so a request
+  // that was in flight when the user turned location OFF can't save or apply it.
   const applyFix = useCallback((next: GeoFix) => {
+    if (!readGeoEnabled()) return;
     writeStoredGeo(next);
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
     setPlaceState(fixToPlace(next));
@@ -147,12 +150,13 @@ export function usePlace(): UsePlaceResult {
   }, []);
 
   // Tap-gated: never prompts on load (no geolocation-on-start). See ./geo.ts.
-  const locate = useCallback(() => {
-    if (!readGeoAuto()) return;
+  const acquireNow = useCallback(() => {
+    if (!readGeoEnabled()) return;
     setLocating(true);
     setLocateFailed(false);
     void acquireLocation().then((next) => {
       setLocating(false);
+      if (!readGeoEnabled()) return;   // switched OFF mid-flight — drop it
       if (next) applyFix(next);
       else setLocateFailed(true);
     });
@@ -161,7 +165,7 @@ export function usePlace(): UsePlaceResult {
   // Like bewthr: if permission is ALREADY granted, silently refresh the last-known
   // fix on load (querying never prompts). Only when no city is picked.
   useEffect(() => {
-    if (!readGeoAuto() || readPersistedPlace().name !== 'default') return;
+    if (!readGeoEnabled() || readPersistedPlace().name !== 'default') return;
     let cancelled = false;
     void geoPermissionGranted().then(async (granted) => {
       if (!granted || cancelled) return;
@@ -171,20 +175,28 @@ export function usePlace(): UsePlaceResult {
     return () => { cancelled = true; };
   }, [applyFix]);
 
-  // MANUAL is the kill switch: wipe the saved fix and drop back to Greenwich
-  // (a picked city is kept). AUTO acquires right away — the switch is a gesture.
-  const setGeoAuto = useCallback((auto: boolean) => {
-    writeGeoAuto(auto);
-    setGeoAutoState(auto);
+  // OFF is the kill switch: wipe the saved fix and drop back to Greenwich
+  // (a picked city is kept). ON acquires right away — the switch is a gesture.
+  const setGeoEnabled = useCallback((on: boolean) => {
+    writeGeoEnabled(on);
+    setGeoEnabledState(on);
     setLocateFailed(false);
-    if (auto) {
-      locate();
+    if (on) {
+      acquireNow();
       return;
     }
     clearStoredGeo();
     setFix(null);
+    setLocating(false);
     setPlaceState((p) => (p.name === 'default' ? readPersistedPlace() : p));
-  }, [locate]);
+  }, [acquireNow]);
+
+  // bewthr's one-tap locate: turn location ON if it's off (which acquires),
+  // else re-acquire.
+  const locate = useCallback(() => {
+    if (!readGeoEnabled()) setGeoEnabled(true);
+    else acquireNow();
+  }, [setGeoEnabled, acquireNow]);
 
   const setPlace = useCallback((next: Place) => {
     setPlaceState(next);
@@ -217,6 +229,6 @@ export function usePlace(): UsePlaceResult {
 
   return {
     place, setPlace, second, setSecond, clearSecond,
-    locate, fix, locating, locateFailed, geoAuto, setGeoAuto,
+    locate, fix, locating, locateFailed, geoEnabled, setGeoEnabled,
   };
 }

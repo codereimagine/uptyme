@@ -106,33 +106,46 @@ interface SettingsProps {
   onClose: () => void;
   demo: boolean;
   onDemoChange: (on: boolean) => void;
-  geoAuto: boolean;
-  onGeoAutoChange: (auto: boolean) => void;
+  geoEnabled: boolean;
+  onGeoEnabledChange: (on: boolean) => void;
   geoFix: GeoFix | null;
+  geoLocating: boolean;
+  geoFailed: boolean;
 }
 
-// LOCATION — Auto (default) or Manual. Manual is the kill switch: nothing is
-// acquired or sent and the saved fix is wiped (same chokepoint as bewthr).
-function LocationSection({ auto, onChange, fix }: { auto: boolean; onChange: (auto: boolean) => void; fix: GeoFix | null }) {
+// LOCATION — same switch as bewthr: on by default. This button is the security
+// chokepoint. Off wipes the saved fix and stops all location use; nothing is
+// acquired or sent. GPS coords stay on-device (they only feed the sky math).
+function LocationSection({ enabled, onChange, fix, loading, failed }: {
+  enabled: boolean;
+  onChange: (on: boolean) => void;
+  fix: GeoFix | null;
+  loading: boolean;
+  failed: boolean;
+}) {
   let note: string;
-  if (!auto) note = 'Manual — nothing is acquired or sent, and the saved location is wiped. Pick a city with + on the main screen.';
-  else if (fix?.approximate) note = 'Auto — approximate, from your network (GPS was blocked). Kept on your device. Tap the locate button to try GPS again.';
-  else if (fix) note = 'Auto — from your device GPS, kept on your device. Tap the locate button to refresh.';
-  else note = 'Auto — tap TAP TO LOCATE on the dial. GPS first; if it’s blocked, an approximate city-level location from your network (ipwho.is). You can still pick a city with +.';
+  if (loading) note = 'Getting your location…';
+  else if (!enabled) note = 'Location is off. Nothing is acquired or sent. Turn on, or pick a city with +.';
+  else if (failed) note = 'Couldn’t get precise or network location. Add a place by name with + instead.';
+  else if (fix?.approximate) note = 'On — approximate, from your network (GPS was blocked). Kept on your device. Tap the target button to try GPS again.';
+  else if (fix) note = 'On — starts automatically each visit, kept on your device. Tap the target button to update.';
+  else note = 'On — tap the target button in the top bar. If GPS is blocked, it uses your approximate network location.';
 
   return (
     <div className="settings-section">
       <div className="settings-section-title">Location</div>
-      <ChipRow<'auto' | 'manual'>
-        ariaLabel="Location mode"
-        options={[
-          { value: 'auto', label: 'Auto' },
-          { value: 'manual', label: 'Manual' },
-        ]}
-        value={auto ? 'auto' : 'manual'}
-        onChange={(v) => onChange(v === 'auto')}
-      />
-      <div className="settings-note">{note}</div>
+      <button
+        type="button"
+        className="settings-update-check"
+        onClick={() => onChange(!enabled)}
+        // Never disabled (unlike bewthr's): a kill switch must work mid-lookup.
+        // Turning OFF while a request is in flight is safe — see usePlace/geo.
+        aria-busy={loading}
+        aria-pressed={enabled}
+      >
+        {enabled ? 'Location: On — tap to turn off' : 'Location: Off — tap to turn on'}
+      </button>
+      <div className="settings-update-note">{note}</div>
     </div>
   );
 }
@@ -142,7 +155,7 @@ function LocationSection({ auto, onChange, fix }: { auto: boolean; onChange: (au
 // iOS to re-blend a full-screen translucent layer every drag frame — the cause
 // of the drag jank. A full-screen opaque view has nothing to blend and no drag,
 // so the jank is structurally impossible (matches the never-janky search view).
-export function Settings({ open, onClose, demo, onDemoChange, geoAuto, onGeoAutoChange, geoFix }: SettingsProps) {
+export function Settings({ open, onClose, demo, onDemoChange, geoEnabled, onGeoEnabledChange, geoFix, geoLocating, geoFailed }: SettingsProps) {
   const settings = useSettings();
 
   useEffect(() => {
@@ -176,7 +189,7 @@ export function Settings({ open, onClose, demo, onDemoChange, geoAuto, onGeoAuto
         </button>
       </div>
       <div className="settings-view-body">
-      <LocationSection auto={geoAuto} onChange={onGeoAutoChange} fix={geoFix} />
+      <LocationSection enabled={geoEnabled} onChange={onGeoEnabledChange} fix={geoFix} loading={geoLocating} failed={geoFailed} />
 
       <div className="settings-section">
         <div className="settings-section-title">Appearance</div>

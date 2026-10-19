@@ -1,13 +1,13 @@
 // LOCATION — ported from bewthr (store/geo.ts + lib/ipGeo.ts), framework-free.
 //
-// Two modes, chosen in Settings:
-//   AUTO (default) — device GPS first; if it's blocked, fails, times out or never
+// On/off switch in Settings (same as bewthr):
+//   ON (default) — device GPS first; if it's blocked, fails, times out or never
 //     answers (a real Chrome-on-iOS state), fall back to an approximate, city-level
 //     location from the network (ipwho.is, keyless, no permission prompt).
-//   MANUAL — the kill switch: nothing is acquired or sent, the saved fix is wiped,
+//   OFF — the kill switch: nothing is acquired or sent, the saved fix is wiped,
 //     and the user picks a city with the + search instead.
 // GPS coords never leave the device (they only feed the on-device sun/moon math).
-// The IP lookup is the only network use, and only in AUTO after GPS failed.
+// The IP lookup is the only network use, and only when ON and GPS failed.
 
 export interface GeoFix {
   lat: number;
@@ -19,7 +19,7 @@ export interface GeoFix {
 type KV = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 export const GEO_KEY = 'uptyme_geo_v1';
-export const GEO_AUTO_KEY = 'uptyme_geo_auto';
+export const GEO_ENABLED_KEY = 'uptyme_geo_enabled';
 export const GPS_TIMEOUT_MS = 8000;
 export const GPS_MAX_AGE_MS = 600000;
 /** Our own deadline: the API's `timeout` only starts once permission resolves,
@@ -76,18 +76,18 @@ export function clearStoredGeo(kv: KV | null = defaultStorage()): void {
   try { kv?.removeItem(GEO_KEY); } catch { /* ignore */ }
 }
 
-/** AUTO is the default; MANUAL is persisted as '0'. */
-export function readGeoAuto(kv: KV | null = defaultStorage()): boolean {
+/** ON is the default; OFF is persisted as '0'. */
+export function readGeoEnabled(kv: KV | null = defaultStorage()): boolean {
   try {
-    const v = kv?.getItem(GEO_AUTO_KEY);
+    const v = kv?.getItem(GEO_ENABLED_KEY);
     return v == null ? true : v === '1';
   } catch {
     return true;
   }
 }
 
-export function writeGeoAuto(auto: boolean, kv: KV | null = defaultStorage()): void {
-  try { kv?.setItem(GEO_AUTO_KEY, auto ? '1' : '0'); } catch { /* ignore */ }
+export function writeGeoEnabled(on: boolean, kv: KV | null = defaultStorage()): void {
+  try { kv?.setItem(GEO_ENABLED_KEY, on ? '1' : '0'); } catch { /* ignore */ }
 }
 
 /** Device GPS with our watchdog. Rejects on error, missing API or no answer. */
@@ -142,24 +142,32 @@ export async function fetchIpLocation(
 }
 
 export interface AcquireDeps {
-  auto?: boolean;
+  /** Mode override for tests; a function is re-read at every step. */
+  enabled?: boolean | (() => boolean);
   geo?: Geolocation;
   fetchImpl?: typeof fetch;
   watchdogMs?: number;
 }
 
-/** GPS → network fallback. Returns null in MANUAL mode without touching GPS or
- *  the network (the kill switch is enforced here, not just in the UI). */
+/** GPS → network fallback. Returns null in OFF mode without touching GPS or
+ *  the network (the kill switch is enforced here, not just in the UI). The mode
+ *  is re-checked at every step, so flipping to OFF mid-flight (GPS can take
+ *  up to the 12s watchdog) blocks the network fallback and discards any result. */
 export async function acquireLocation(deps: AcquireDeps = {}): Promise<GeoFix | null> {
-  const auto = deps.auto ?? readGeoAuto();
-  if (!auto) return null;
+  const isEnabled = (): boolean =>
+    typeof deps.enabled === 'function' ? deps.enabled() : (deps.enabled ?? readGeoEnabled());
+  if (!isEnabled()) return null;
+  let gps: { lat: number; lon: number } | null = null;
   try {
-    const g = await gpsFix('geo' in deps ? deps.geo : defaultGeolocation(), deps.watchdogMs);
-    return { ...g, approximate: false };
+    gps = await gpsFix('geo' in deps ? deps.geo : defaultGeolocation(), deps.watchdogMs);
   } catch {
-    const ip = await fetchIpLocation(deps.fetchImpl ?? fetch);
-    return ip ? { ...ip, approximate: true } : null;
+    gps = null;
   }
+  if (!isEnabled()) return null;
+  if (gps) return { ...gps, approximate: false };
+  const ip = await fetchIpLocation(deps.fetchImpl ?? fetch);
+  if (!isEnabled()) return null;
+  return ip ? { ...ip, approximate: true } : null;
 }
 
 /** True only when geolocation is ALREADY granted — querying never prompts. */

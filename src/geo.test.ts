@@ -3,14 +3,14 @@ import {
   acquireLocation,
   clearStoredGeo,
   fetchIpLocation,
-  GEO_AUTO_KEY,
+  GEO_ENABLED_KEY,
   GEO_KEY,
   IP_ENDPOINT,
   parseStoredGeo,
-  readGeoAuto,
+  readGeoEnabled,
   readStoredGeo,
   validCoords,
-  writeGeoAuto,
+  writeGeoEnabled,
   writeStoredGeo,
 } from './geo';
 
@@ -64,14 +64,14 @@ describe('storage', () => {
     expect(kv.map.has(GEO_KEY)).toBe(false);
     expect(readStoredGeo(kv)).toBeNull();
   });
-  it('mode is AUTO by default and persists MANUAL', () => {
+  it('mode is ON by default and persists OFF', () => {
     const kv = memoryStorage();
-    expect(readGeoAuto(kv)).toBe(true);
-    writeGeoAuto(false, kv);
-    expect(kv.map.get(GEO_AUTO_KEY)).toBe('0');
-    expect(readGeoAuto(kv)).toBe(false);
-    writeGeoAuto(true, kv);
-    expect(readGeoAuto(kv)).toBe(true);
+    expect(readGeoEnabled(kv)).toBe(true);
+    writeGeoEnabled(false, kv);
+    expect(kv.map.get(GEO_ENABLED_KEY)).toBe('0');
+    expect(readGeoEnabled(kv)).toBe(false);
+    writeGeoEnabled(true, kv);
+    expect(readGeoEnabled(kv)).toBe(true);
   });
   it('survives corrupt storage', () => {
     const kv = memoryStorage();
@@ -100,35 +100,60 @@ describe('acquireLocation', () => {
   it('uses GPS when it answers, and never calls the network', async () => {
     const geo = fakeGeo('ok');
     const f = fakeFetch(ipBody);
-    expect(await acquireLocation({ auto: true, geo, fetchImpl: f })).toEqual({ lat: 40.71, lon: -74.01, approximate: false });
+    expect(await acquireLocation({ enabled: true, geo, fetchImpl: f })).toEqual({ lat: 40.71, lon: -74.01, approximate: false });
     expect(f).not.toHaveBeenCalled();
   });
 
   it('falls back to the network when GPS is denied/fails', async () => {
     const f = fakeFetch(ipBody);
-    expect(await acquireLocation({ auto: true, geo: fakeGeo('error'), fetchImpl: f })).toEqual({ lat: 40.7, lon: -74.0, approximate: true });
+    expect(await acquireLocation({ enabled: true, geo: fakeGeo('error'), fetchImpl: f })).toEqual({ lat: 40.7, lon: -74.0, approximate: true });
     expect(f).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to the network when GPS never answers (watchdog)', async () => {
     const f = fakeFetch(ipBody);
-    expect(await acquireLocation({ auto: true, geo: fakeGeo('hang'), fetchImpl: f, watchdogMs: 20 })).toEqual({ lat: 40.7, lon: -74.0, approximate: true });
+    expect(await acquireLocation({ enabled: true, geo: fakeGeo('hang'), fetchImpl: f, watchdogMs: 20 })).toEqual({ lat: 40.7, lon: -74.0, approximate: true });
     expect(f).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to the network when the browser has no geolocation API', async () => {
     const f = fakeFetch(ipBody);
-    expect(await acquireLocation({ auto: true, geo: undefined, fetchImpl: f })).toEqual({ lat: 40.7, lon: -74.0, approximate: true });
+    expect(await acquireLocation({ enabled: true, geo: undefined, fetchImpl: f })).toEqual({ lat: 40.7, lon: -74.0, approximate: true });
   });
 
   it('returns null when both GPS and the network fail', async () => {
-    expect(await acquireLocation({ auto: true, geo: fakeGeo('error'), fetchImpl: fakeFetch({ success: false }) })).toBeNull();
+    expect(await acquireLocation({ enabled: true, geo: fakeGeo('error'), fetchImpl: fakeFetch({ success: false }) })).toBeNull();
   });
 
-  it('MANUAL mode (kill switch): no GPS request and no network request', async () => {
+  it('switching to OFF while GPS is pending: no network request, nothing returned', async () => {
+    let auto = true;
+    const f = fakeFetch(ipBody);
+    const p = acquireLocation({ enabled: () => auto, geo: fakeGeo('hang'), fetchImpl: f, watchdogMs: 30 });
+    auto = false;   // user flips the kill switch mid-flight
+    expect(await p).toBeNull();
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it('switching to OFF while the network lookup is in flight: result discarded', async () => {
+    let auto = true;
+    const f = vi.fn(async () => { auto = false; return { ok: true, json: async () => ipBody } as Response; }) as unknown as typeof fetch;
+    expect(await acquireLocation({ enabled: () => auto, geo: fakeGeo('error'), fetchImpl: f })).toBeNull();
+  });
+
+  it('switching to OFF before GPS answers: GPS result discarded', async () => {
+    let auto = true;
+    let answer: PositionCallback = () => {};
+    const geo = { getCurrentPosition: (ok: PositionCallback) => { answer = ok; } } as unknown as Geolocation;
+    const p = acquireLocation({ enabled: () => auto, geo, fetchImpl: fakeFetch(ipBody) });
+    auto = false;
+    answer({ coords: { latitude: 40.71, longitude: -74.01 } } as GeolocationPosition);
+    expect(await p).toBeNull();
+  });
+
+  it('OFF mode (kill switch): no GPS request and no network request', async () => {
     const geo = fakeGeo('ok');
     const f = fakeFetch(ipBody);
-    expect(await acquireLocation({ auto: false, geo, fetchImpl: f })).toBeNull();
+    expect(await acquireLocation({ enabled: false, geo, fetchImpl: f })).toBeNull();
     expect(geo.getCurrentPosition).not.toHaveBeenCalled();
     expect(f).not.toHaveBeenCalled();
   });

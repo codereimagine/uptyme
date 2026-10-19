@@ -149,7 +149,7 @@ export function useSettings(): UseSettingsResult {
         localStorage.removeItem('uptyme.place');
         localStorage.removeItem('uptyme.place2');
         localStorage.removeItem('uptyme_geo_v1');     // saved location fix (./geo.ts)
-        localStorage.removeItem('uptyme_geo_auto');   // location mode → back to Auto
+        localStorage.removeItem('uptyme_geo_enabled');   // location on/off → back to On
       } catch {
         // ignore
       }

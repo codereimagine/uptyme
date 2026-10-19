@@ -28,7 +28,7 @@ function fmtParts(h: number, m: number, format: TimeFormat): { time: string; mer
 }
 
 // Show the time IN the selected place. Source chain (no extra network — the
-// local-first lock allows only city search and the Auto location fallback):
+// local-first lock allows only city search and the location network fallback):
 // 1) the place's IANA timezone (exact,
 // DST-aware, from the geocoder / device for the default place); 2) a secure
 // LOCAL fallback derived from the city's longitude (offline, city-relative,
@@ -106,7 +106,7 @@ function genStars(count: number): Star[] {
 export function App() {
   const {
     place, setPlace, second, setSecond, clearSecond,
-    locate, fix, locating, locateFailed, geoAuto, setGeoAuto,
+    locate, fix, locating, locateFailed, geoEnabled, setGeoEnabled,
   } = usePlace();
   const { timeFormat, refreshSeconds } = useSettings();
   const { frame, demo, setDemo } = useTicker(
@@ -165,6 +165,26 @@ export function App() {
             </div>
           </div>
           <div className="header-actions">
+            {/* Target / locate — same button as bewthr's top bar: turns location
+                ON if it's off, else re-acquires (GPS, else network fallback). */}
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={locate}
+              disabled={locating}
+              aria-busy={locating}
+              title="Use my location"
+              aria-label="Use my location"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="6" />
+                <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                <line x1="12" y1="2" x2="12" y2="5" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+                <line x1="2" y1="12" x2="5" y2="12" />
+                <line x1="19" y1="12" x2="22" y2="12" />
+              </svg>
+            </button>
             <button
               type="button"
               className="icon-btn"
@@ -231,11 +251,11 @@ export function App() {
             <button
               type="button"
               className="here"
-              onClick={geoAuto ? locate : () => setSettingsOpen(true)}
-              title={geoAuto ? undefined : 'Location is set to Manual — open Settings to switch to Auto, or use + to pick a city.'}
+              onClick={locate}
+              title={geoEnabled ? undefined : 'Location is off — tap to turn it on, or use + to pick a city.'}
             >
-              ◎ {!geoAuto
-                ? 'MANUAL · USE + FOR CITY'
+              ◎ {!geoEnabled
+                ? 'LOCATION OFF · TAP TO TURN ON'
                 : locating
                   ? 'LOCATING…'
                   : fix
@@ -317,9 +337,11 @@ export function App() {
         onClose={() => setSettingsOpen(false)}
         demo={demo}
         onDemoChange={setDemo}
-        geoAuto={geoAuto}
-        onGeoAutoChange={setGeoAuto}
+        geoEnabled={geoEnabled}
+        onGeoEnabledChange={setGeoEnabled}
         geoFix={fix}
+        geoLocating={locating}
+        geoFailed={locateFailed}
       />
     </>
   );

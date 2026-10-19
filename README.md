@@ -4,6 +4,8 @@
 
 ### A clock that shows your time, wherever you are on Earth.
 
+$\textcolor{#FFB04D}{\textsf{here}}$ · $\textcolor{#9FB4E0}{\textsf{everywhere}}$ · $\textcolor{#FF5C7A}{\textsf{now}}$
+
 *No accounts, no sign-up, no ads — and your exact location never leaves your device.*
 
 **▶ Open it — [codereimagine.github.io/uptyme](https://codereimagine.github.io/uptyme/)**
@@ -27,13 +29,13 @@
 
 ## 🕐 What is it?
 
-uptyme is a clock. It shows your **local time**, big and clear, anywhere on Earth — as a classic **Clock** dial or an **Orbit** ring, your pick. Pin a second city to keep another place's time beside it too.
+uptyme is a clock. It shows your $\textcolor{#FFB04D}{\textsf{local time}}$, big and clear, anywhere on Earth — as a classic $\textcolor{#9FB4E0}{\textsf{Clock}}$ dial or an $\textcolor{#FF5C7A}{\textsf{Orbit}}$ ring, your pick. Pin a second city to keep another place's time beside it too.
 
 No app store, no account, nothing to sign up for. Open the link and it works. Like it? Add it to your home screen like any other app.
 
 ## ✨ How we do things differently
 
-Most apps want your account, your data, and your attention. Every codereimagine app is built the other way round:
+Most apps want your account, your data, and your attention. Every codereimagine app is built $\textcolor{#9FB4E0}{\textsf{the other way round}}$:
 
 - **Private by default** — no accounts, no tracking, nothing sold. Your exact location stays on *your* device.
 - **No ads, no clutter** — nothing on the screen is trying to sell you something.
@@ -71,7 +73,7 @@ npm test           # unit tests (incl. the Meeus/NOAA verification)
 
 ## 🙌 Credits & thanks
 
-Built with [Claude Code](https://claude.com/claude-code). Nothing here is hidden — uptyme stands on:
+Built with [Claude Code](https://claude.com/claude-code). $\textcolor{#FFB04D}{\textsf{Nothing here is hidden}}$ — uptyme stands on:
 
 - **Geocoding** — [Open-Meteo](https://open-meteo.com) (CC BY 4.0).
 - **Astronomy** — sun and moon from Jean Meeus, *Astronomical Algorithms*, and the NOAA Solar Position methods.

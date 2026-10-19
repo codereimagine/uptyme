@@ -4,7 +4,7 @@
 
 ### A clock that shows your time, wherever you are on Earth.
 
-$\textcolor{#FFB04D}{\textsf{here}}$ · $\textcolor{#9FB4E0}{\textsf{everywhere}}$ · $\textcolor{#FF5C7A}{\textsf{now}}$
+$\textcolor{#FFB04D}{\textsf{space}}$ · $\textcolor{#9FB4E0}{\textsf{time}}$ · $\textcolor{#FF5C7A}{\textsf{continuum}}$
 
 *No accounts, no sign-up, no ads — and your exact location never leaves your device.*
 

@@ -27,8 +27,9 @@ function fmtParts(h: number, m: number, format: TimeFormat): { time: string; mer
   return { time: `${hh}:${mm}`, mer };
 }
 
-// Show the time IN the selected place. Source chain (no extra network — that
-// would break the zero-network lock): 1) the place's IANA timezone (exact,
+// Show the time IN the selected place. Source chain (no extra network — the
+// local-first lock allows only city search and the Auto location fallback):
+// 1) the place's IANA timezone (exact,
 // DST-aware, from the geocoder / device for the default place); 2) a secure
 // LOCAL fallback derived from the city's longitude (offline, city-relative,
 // ~±1h on DST); 3) device-local time only if neither is available.
@@ -103,7 +104,10 @@ function genStars(count: number): Star[] {
 }
 
 export function App() {
-  const { place, setPlace, second, setSecond, clearSecond, locate, located, locating, geoError } = usePlace();
+  const {
+    place, setPlace, second, setSecond, clearSecond,
+    locate, fix, locating, locateFailed, geoAuto, setGeoAuto,
+  } = usePlace();
   const { timeFormat, refreshSeconds } = useSettings();
   const { frame, demo, setDemo } = useTicker(
     false,
@@ -227,20 +231,18 @@ export function App() {
             <button
               type="button"
               className="here"
-              onClick={locate}
-              title={geoError === 'denied' ? 'Location is blocked for this browser. Allow it in Settings (iOS: Settings › Chrome/Safari › Location), then tap again.' : undefined}
+              onClick={geoAuto ? locate : () => setSettingsOpen(true)}
+              title={geoAuto ? undefined : 'Location is set to Manual — open Settings to switch to Auto, or use + to pick a city.'}
             >
-              ◎ {locating
-                ? 'LOCATING…'
-                : located
-                ? 'YOU ARE HERE'
-                : geoError === 'noresponse'
-                  ? 'NO RESPONSE · USE + FOR CITY'
-                  : geoError === 'denied'
-                  ? 'LOCATION OFF · CHECK SETTINGS'
-                  : geoError === 'unavailable'
-                    ? 'NO FIX · TAP TO RETRY'
-                    : 'TAP TO LOCATE'}
+              ◎ {!geoAuto
+                ? 'MANUAL · USE + FOR CITY'
+                : locating
+                  ? 'LOCATING…'
+                  : fix
+                    ? (fix.approximate ? 'NEAR HERE · APPROX' : 'YOU ARE HERE')
+                    : locateFailed
+                      ? 'NO FIX · USE + FOR CITY'
+                      : 'TAP TO LOCATE'}
             </button>
           </div>
         </div>
@@ -315,6 +317,9 @@ export function App() {
         onClose={() => setSettingsOpen(false)}
         demo={demo}
         onDemoChange={setDemo}
+        geoAuto={geoAuto}
+        onGeoAutoChange={setGeoAuto}
+        geoFix={fix}
       />
     </>
   );

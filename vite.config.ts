@@ -44,7 +44,8 @@ export default defineConfig({
     // Strip the modulepreload polyfill — it ships a dead fetch() into the
     // bundle for legacy browsers we don't target, and the local-first lock
     // forbids any reachable network code path (other than the explicit
-    // geocoding search and the SW precache fetches).
+    // geocoding search, the Auto-mode location fallback in src/geo.ts, and the
+    // SW precache fetches).
     modulePreload: { polyfill: false },
   },
   test: {

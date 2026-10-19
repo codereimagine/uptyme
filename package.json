@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "uptyme — dual-mode time instrument. Local-first, on-device astronomy, zero runtime network.",
+  "description": "uptyme — dual-mode time instrument. Local-first, on-device astronomy; network only for city search and the optional approximate-location fallback.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

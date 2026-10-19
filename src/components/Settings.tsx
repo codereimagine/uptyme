@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { usePwaUpdate } from '../lib/PwaUpdate';
+import type { GeoFix } from '../geo';
 import {
   useSettings,
   type Animations,
@@ -105,6 +106,35 @@ interface SettingsProps {
   onClose: () => void;
   demo: boolean;
   onDemoChange: (on: boolean) => void;
+  geoAuto: boolean;
+  onGeoAutoChange: (auto: boolean) => void;
+  geoFix: GeoFix | null;
+}
+
+// LOCATION — Auto (default) or Manual. Manual is the kill switch: nothing is
+// acquired or sent and the saved fix is wiped (same chokepoint as bewthr).
+function LocationSection({ auto, onChange, fix }: { auto: boolean; onChange: (auto: boolean) => void; fix: GeoFix | null }) {
+  let note: string;
+  if (!auto) note = 'Manual — nothing is acquired or sent, and the saved location is wiped. Pick a city with + on the main screen.';
+  else if (fix?.approximate) note = 'Auto — approximate, from your network (GPS was blocked). Kept on your device. Tap the locate button to try GPS again.';
+  else if (fix) note = 'Auto — from your device GPS, kept on your device. Tap the locate button to refresh.';
+  else note = 'Auto — tap TAP TO LOCATE on the dial. GPS first; if it’s blocked, an approximate city-level location from your network (ipwho.is). You can still pick a city with +.';
+
+  return (
+    <div className="settings-section">
+      <div className="settings-section-title">Location</div>
+      <ChipRow<'auto' | 'manual'>
+        ariaLabel="Location mode"
+        options={[
+          { value: 'auto', label: 'Auto' },
+          { value: 'manual', label: 'Manual' },
+        ]}
+        value={auto ? 'auto' : 'manual'}
+        onChange={(v) => onChange(v === 'auto')}
+      />
+      <div className="settings-note">{note}</div>
+    </div>
+  );
 }
 
 // Settings is a full-screen OPAQUE view (same shell as PlacesView), not a
@@ -112,7 +142,7 @@ interface SettingsProps {
 // iOS to re-blend a full-screen translucent layer every drag frame — the cause
 // of the drag jank. A full-screen opaque view has nothing to blend and no drag,
 // so the jank is structurally impossible (matches the never-janky search view).
-export function Settings({ open, onClose, demo, onDemoChange }: SettingsProps) {
+export function Settings({ open, onClose, demo, onDemoChange, geoAuto, onGeoAutoChange, geoFix }: SettingsProps) {
   const settings = useSettings();
 
   useEffect(() => {
@@ -146,6 +176,8 @@ export function Settings({ open, onClose, demo, onDemoChange }: SettingsProps) {
         </button>
       </div>
       <div className="settings-view-body">
+      <LocationSection auto={geoAuto} onChange={onGeoAutoChange} fix={geoFix} />
+
       <div className="settings-section">
         <div className="settings-section-title">Appearance</div>
         <ChipRow<Theme>

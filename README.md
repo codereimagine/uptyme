@@ -64,7 +64,7 @@ npm test           # unit tests (incl. the Meeus/NOAA verification)
 <details><summary><b>🔧 Under the hood</b></summary>
 
 - **Sun & moon:** NOAA Solar Position Algorithm and Meeus methods, computed on-device in `src/engine.ts` — no servers, verified against the reference harness it ports from.
-- **Location:** browser geolocation, **tap-gated and in-memory only** — never stored, never reverse-geocoded; Greenwich (the zero meridian) as a graceful fallback. Pinned cities are saved on your device only.
+- **Location:** **Auto** (default) or **Manual**, chosen in Settings. Auto uses browser geolocation, **tap-gated** (never prompts on load); if GPS is blocked or never answers, it falls back to an approximate, city-level location from your network via [ipwho.is](https://ipwho.is) — the only location-related request uptyme makes (the lookup sees your IP, as any request does). GPS coordinates are never sent anywhere or reverse-geocoded; the last fix is saved on your device only. **Manual is the kill switch:** nothing is acquired or sent and the saved fix is wiped — pick a city with **+** instead. Greenwich (the zero meridian) is the fallback. Pinned cities are saved on your device only.
 - **Timezones:** the device's `Intl.DateTimeFormat` for your place; searched cities carry their own IANA zone, so the readout stays DST-correct.
 - **City search:** [Open-Meteo geocoding](https://open-meteo.com/en/docs/geocoding-api), keyless — the only outbound call in the whole app, and only when you type it.
 - **Stack:** React 18 · TypeScript · Vite · `vite-plugin-pwa` (Workbox) · Vitest.

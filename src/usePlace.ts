@@ -1,5 +1,15 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LAT_DEFAULT, LON_DEFAULT } from './engine';
+import {
+  acquireLocation,
+  clearStoredGeo,
+  geoPermissionGranted,
+  readGeoAuto,
+  readStoredGeo,
+  writeGeoAuto,
+  writeStoredGeo,
+  type GeoFix,
+} from './geo';
 
 export interface Place {
   name: string;
@@ -81,88 +91,105 @@ export interface UsePlaceResult {
   second: Place | null;
   setSecond: (next: Place) => void;
   clearSecond: () => void;
-  /** Request device geolocation. Tap-gated — never auto-called on load. */
+  /** Locate now: GPS, else approximate network location. Tap-gated (or the
+   *  Settings switch to AUTO). No-op in MANUAL mode. */
   locate: () => void;
-  /** True once the user has located this session (coords in memory only). */
-  located: boolean;
-  /** True from the tap until the browser answers (or the watchdog gives up). */
+  /** The location fix currently driving the dial, or null (Greenwich / a city). */
+  fix: GeoFix | null;
+  /** True from the tap until a fix arrives or both sources fail. */
   locating: boolean;
-  /** Why the last locate() failed — 'denied' (blocked for this browser/site,
-   *  the OS won't re-prompt), 'unavailable' (no fix / timeout) or 'noresponse'
-   *  (the browser never called back — seen on Chrome iOS). null = no error. */
-  geoError: GeoError | null;
+  /** True when the last AUTO attempt got neither GPS nor a network location. */
+  locateFailed: boolean;
+  /** AUTO (GPS → network fallback) or MANUAL (kill switch: city search only). */
+  geoAuto: boolean;
+  setGeoAuto: (auto: boolean) => void;
 }
 
-export type GeoError = 'denied' | 'unavailable' | 'noresponse';
+/** A location fix drives the dial as the unnamed "default" place in device tz. */
+function fixToPlace(fix: GeoFix): Place {
+  return { name: 'default', lat: fix.lat, lon: fix.lon, timezone: DEVICE_TZ };
+}
 
-/** Our own deadline: the API's `timeout` only starts once permission resolves,
- *  so a request whose permission never resolves would otherwise hang forever. */
-const LOCATE_WATCHDOG_MS = 12000;
+/** A picked city (name !== 'default') always wins; otherwise, in AUTO, the
+ *  last-known fix loads instantly (like bewthr), else Greenwich. */
+function initialLocation(): { place: Place; fix: GeoFix | null } {
+  const persisted = readPersistedPlace();
+  if (persisted.name !== 'default' || !readGeoAuto()) return { place: persisted, fix: null };
+  const fix = readStoredGeo();
+  return fix ? { place: fixToPlace(fix), fix } : { place: persisted, fix: null };
+}
 
 /**
  * Uptyme is a single-location instrument — one place's sky drives the dial.
  * `place` is that active location. `second` is an optional reference point
  * (name + lat/long readout under the instrument); it never drives the engine,
- * it's just an "elsewhere" marker. Both persist to localStorage; nothing is
- * transmitted except the geocoding search the user explicitly triggers.
+ * it's just an "elsewhere" marker. Both persist to localStorage. Network use is
+ * the geocoding search the user triggers, plus — in AUTO only, when GPS fails —
+ * the approximate network-location fallback (see ./geo.ts). MANUAL sends nothing.
  */
 export function usePlace(): UsePlaceResult {
-  const [place, setPlaceState] = useState<Place>(readPersistedPlace);
+  const [init] = useState(initialLocation);
+  const [place, setPlaceState] = useState<Place>(init.place);
+  const [fix, setFix] = useState<GeoFix | null>(init.fix);
   const [second, setSecondState] = useState<Place | null>(readPersistedSecond);
-  const [located, setLocated] = useState(false);
   const [locating, setLocating] = useState(false);
-  const [geoError, setGeoError] = useState<GeoError | null>(null);
+  const [locateFailed, setLocateFailed] = useState(false);
+  const [geoAuto, setGeoAutoState] = useState(readGeoAuto);
 
-  // Geolocation is TAP-GATED: we never auto-request on load. Auto-requesting
-  // prompts for a permission without a user gesture (a "geolocation-on-start"
-  // best-practice flag) — instead the user taps "TAP TO LOCATE" to call
-  // locate(). Coords are IN-MEMORY ONLY (not persisted; the saved place stays
-  // "default"). No network: the geolocation API is local, no reverse-geocode.
+  // Most recent choice wins: a fix replaces a picked city (the city is dropped
+  // from storage so the fix also wins on the next load).
+  const applyFix = useCallback((next: GeoFix) => {
+    writeStoredGeo(next);
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    setPlaceState(fixToPlace(next));
+    setFix(next);
+    setLocateFailed(false);
+  }, []);
+
+  // Tap-gated: never prompts on load (no geolocation-on-start). See ./geo.ts.
   const locate = useCallback(() => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGeoError('unavailable');
+    if (!readGeoAuto()) return;
+    setLocating(true);
+    setLocateFailed(false);
+    void acquireLocation().then((next) => {
+      setLocating(false);
+      if (next) applyFix(next);
+      else setLocateFailed(true);
+    });
+  }, [applyFix]);
+
+  // Like bewthr: if permission is ALREADY granted, silently refresh the last-known
+  // fix on load (querying never prompts). Only when no city is picked.
+  useEffect(() => {
+    if (!readGeoAuto() || readPersistedPlace().name !== 'default') return;
+    let cancelled = false;
+    void geoPermissionGranted().then(async (granted) => {
+      if (!granted || cancelled) return;
+      const next = await acquireLocation();
+      if (next && !cancelled && readPersistedPlace().name === 'default') applyFix(next);
+    });
+    return () => { cancelled = true; };
+  }, [applyFix]);
+
+  // MANUAL is the kill switch: wipe the saved fix and drop back to Greenwich
+  // (a picked city is kept). AUTO acquires right away — the switch is a gesture.
+  const setGeoAuto = useCallback((auto: boolean) => {
+    writeGeoAuto(auto);
+    setGeoAutoState(auto);
+    setLocateFailed(false);
+    if (auto) {
+      locate();
       return;
     }
-    setLocating(true);
-    setGeoError(null);
-    let answered = false;
-    const watchdog = setTimeout(() => {
-      if (answered) return;
-      setLocating(false);
-      setGeoError('noresponse');
-    }, LOCATE_WATCHDOG_MS);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        answered = true;
-        clearTimeout(watchdog);
-        setPlaceState({
-          name: 'default',
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-          timezone: DEVICE_TZ,
-        });
-        setLocated(true);
-        setLocating(false);
-        setGeoError(null);
-      },
-      (err) => {
-        answered = true;
-        clearTimeout(watchdog);
-        setLocating(false);
-        // Keep the Greenwich-derived default, but say WHY so the tap isn't a
-        // silent dead end. Once denied, the browser won't prompt again — the
-        // user has to re-allow location in OS/browser settings.
-        setGeoError(err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable');
-      },
-      // Same budget as starnav: a cold iPhone fix (Chrome/Safari via CoreLocation)
-      // regularly takes >5s, which timed out and looked like a dead tap. A
-      // 10-minute cache makes repeat taps instant.
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
-    );
-  }, []);
+    clearStoredGeo();
+    setFix(null);
+    setPlaceState((p) => (p.name === 'default' ? readPersistedPlace() : p));
+  }, [locate]);
 
   const setPlace = useCallback((next: Place) => {
     setPlaceState(next);
+    setFix(null);
+    setLocateFailed(false);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
@@ -188,5 +215,8 @@ export function usePlace(): UsePlaceResult {
     }
   }, []);
 
-  return { place, setPlace, second, setSecond, clearSecond, locate, located, locating, geoError };
+  return {
+    place, setPlace, second, setSecond, clearSecond,
+    locate, fix, locating, locateFailed, geoAuto, setGeoAuto,
+  };
 }

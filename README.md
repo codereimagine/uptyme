@@ -50,6 +50,16 @@ Most apps want your account, your data, and your attention. Every codereimagine 
 - **Pin a second city** — keep another place's time beneath the face, always DST-correct.
 - **Anywhere** — fast on phones and computers.
 
+## 🧭 How to use it
+
+1. **Open it** — tap [codereimagine.github.io/uptyme](https://codereimagine.github.io/uptyme/). No install, no account, nothing to sign up for.
+2. **Set your place** — tap the target button (top right) or **TAP TO LOCATE** on the dial, or tap **+** to pick a city by name. If GPS is blocked it uses an approximate network location; switch location off any time in **⚙ → Location**.
+3. **Read the time** — the big number is your local time; the dial shows where the sun and moon really are right now.
+4. **Pick a face** — **Orbit** (the sun and moon on a ring around the horizon) or **Clock** (a classic dial), from the switch at the top.
+5. **Keep another city in view** — tap **+ SECOND CITY** under the dial.
+6. **Make it yours** — **⚙** sets the theme, 12 or 24-hour time, animations, and a demo that races through a whole day.
+7. **Keep it** — add it to your home screen and it works offline.
+
 ## 🛠️ Run or build it yourself (developers)
 
 ```bash

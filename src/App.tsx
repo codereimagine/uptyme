@@ -103,7 +103,7 @@ function genStars(count: number): Star[] {
 }
 
 export function App() {
-  const { place, setPlace, second, setSecond, clearSecond, locate, located } = usePlace();
+  const { place, setPlace, second, setSecond, clearSecond, locate, located, geoError } = usePlace();
   const { timeFormat, refreshSeconds } = useSettings();
   const { frame, demo, setDemo } = useTicker(
     false,
@@ -224,8 +224,19 @@ export function App() {
             <div className="solar">
               SOLAR · alt {frame ? frame.sun.alt.toFixed(0) : '—'}°
             </div>
-            <button type="button" className="here" onClick={locate}>
-              ◎ {located ? 'YOU ARE HERE' : 'TAP TO LOCATE'}
+            <button
+              type="button"
+              className="here"
+              onClick={locate}
+              title={geoError === 'denied' ? 'Location is blocked for this browser. Allow it in Settings (iOS: Settings › Chrome/Safari › Location), then tap again.' : undefined}
+            >
+              ◎ {located
+                ? 'YOU ARE HERE'
+                : geoError === 'denied'
+                  ? 'LOCATION OFF · CHECK SETTINGS'
+                  : geoError === 'unavailable'
+                    ? 'NO FIX · TAP TO RETRY'
+                    : 'TAP TO LOCATE'}
             </button>
           </div>
         </div>

@@ -85,6 +85,9 @@ export interface UsePlaceResult {
   locate: () => void;
   /** True once the user has located this session (coords in memory only). */
   located: boolean;
+  /** Why the last locate() failed — 'denied' (blocked for this browser/site,
+   *  the OS won't re-prompt) or 'unavailable' (no fix / timeout). null = no error. */
+  geoError: 'denied' | 'unavailable' | null;
 }
 
 /**
@@ -98,6 +101,7 @@ export function usePlace(): UsePlaceResult {
   const [place, setPlaceState] = useState<Place>(readPersistedPlace);
   const [second, setSecondState] = useState<Place | null>(readPersistedSecond);
   const [located, setLocated] = useState(false);
+  const [geoError, setGeoError] = useState<'denied' | 'unavailable' | null>(null);
 
   // Geolocation is TAP-GATED: we never auto-request on load. Auto-requesting
   // prompts for a permission without a user gesture (a "geolocation-on-start"
@@ -105,7 +109,10 @@ export function usePlace(): UsePlaceResult {
   // locate(). Coords are IN-MEMORY ONLY (not persisted; the saved place stays
   // "default"). No network: the geolocation API is local, no reverse-geocode.
   const locate = useCallback(() => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGeoError('unavailable');
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setPlaceState({
@@ -115,9 +122,13 @@ export function usePlace(): UsePlaceResult {
           timezone: DEVICE_TZ,
         });
         setLocated(true);
+        setGeoError(null);
       },
-      () => {
-        // Permission denied / unavailable: keep Greenwich-derived default.
+      (err) => {
+        // Keep the Greenwich-derived default, but say WHY so the tap isn't a
+        // silent dead end. Once denied, the browser won't prompt again — the
+        // user has to re-allow location in OS/browser settings.
+        setGeoError(err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable');
       },
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
     );
@@ -150,5 +161,5 @@ export function usePlace(): UsePlaceResult {
     }
   }, []);
 
-  return { place, setPlace, second, setSecond, clearSecond, locate, located };
+  return { place, setPlace, second, setSecond, clearSecond, locate, located, geoError };
 }

@@ -20,6 +20,8 @@ type KV = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 export const GEO_KEY = 'uptyme_geo_v1';
 export const GEO_ENABLED_KEY = 'uptyme_geo_enabled';
+/** Same switch, saved as Auto/Manual by release e66e787 — read for migration. */
+export const LEGACY_GEO_AUTO_KEY = 'uptyme_geo_auto';
 export const GPS_TIMEOUT_MS = 8000;
 export const GPS_MAX_AGE_MS = 600000;
 /** Our own deadline: the API's `timeout` only starts once permission resolves,
@@ -80,14 +82,21 @@ export function clearStoredGeo(kv: KV | null = defaultStorage()): void {
 export function readGeoEnabled(kv: KV | null = defaultStorage()): boolean {
   try {
     const v = kv?.getItem(GEO_ENABLED_KEY);
-    return v == null ? true : v === '1';
+    if (v != null) return v === '1';
+    // Honour a choice saved under the old key, so an OFF made there isn't
+    // silently reset to ON (privacy control must survive the rename).
+    const legacy = kv?.getItem(LEGACY_GEO_AUTO_KEY);
+    return legacy == null ? true : legacy === '1';
   } catch {
     return true;
   }
 }
 
 export function writeGeoEnabled(on: boolean, kv: KV | null = defaultStorage()): void {
-  try { kv?.setItem(GEO_ENABLED_KEY, on ? '1' : '0'); } catch { /* ignore */ }
+  try {
+    kv?.setItem(GEO_ENABLED_KEY, on ? '1' : '0');
+    kv?.removeItem(LEGACY_GEO_AUTO_KEY);   // migrated
+  } catch { /* ignore */ }
 }
 
 /** Device GPS with our watchdog. Rejects on error, missing API or no answer. */

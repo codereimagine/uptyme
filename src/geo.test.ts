@@ -73,6 +73,23 @@ describe('storage', () => {
     writeGeoEnabled(true, kv);
     expect(readGeoEnabled(kv)).toBe(true);
   });
+  it('honours an opt-out saved under the old key (uptyme_geo_auto) and migrates it', () => {
+    const kv = memoryStorage();
+    kv.setItem('uptyme_geo_auto', '0');            // OFF saved by release e66e787
+    expect(readGeoEnabled(kv)).toBe(false);        // must stay OFF, not reset to ON
+    writeGeoEnabled(false, kv);
+    expect(kv.map.get(GEO_ENABLED_KEY)).toBe('0');
+    expect(kv.map.has('uptyme_geo_auto')).toBe(false);
+    kv.setItem('uptyme_geo_auto', '1');
+    kv.removeItem(GEO_ENABLED_KEY);
+    expect(readGeoEnabled(kv)).toBe(true);
+  });
+  it('the new key wins over the old one', () => {
+    const kv = memoryStorage();
+    kv.setItem('uptyme_geo_auto', '0');
+    kv.setItem(GEO_ENABLED_KEY, '1');
+    expect(readGeoEnabled(kv)).toBe(true);
+  });
   it('survives corrupt storage', () => {
     const kv = memoryStorage();
     kv.setItem(GEO_KEY, '{not json');

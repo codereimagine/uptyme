@@ -130,7 +130,10 @@ export function usePlace(): UsePlaceResult {
         // user has to re-allow location in OS/browser settings.
         setGeoError(err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable');
       },
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
+      // Same budget as starnav: a cold iPhone fix (Chrome/Safari via CoreLocation)
+      // regularly takes >5s, which timed out and looked like a dead tap. A
+      // 10-minute cache makes repeat taps instant.
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
     );
   }, []);
 

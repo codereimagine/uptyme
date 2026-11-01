@@ -2,9 +2,25 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import type { Plugin } from 'vite';
+
+// Content-Security-Policy, the local-first lock enforced by the browser: only this
+// origin, plus the two network paths below (city search, Auto-mode location fallback).
+// Build only — in dev, Vite injects CSS as inline <style> tags that this would block.
+const CSP = [
+  "default-src 'self'", "script-src 'self'", "style-src 'self'", "font-src 'self'", "img-src 'self'",
+  "connect-src 'self' https://geocoding-api.open-meteo.com https://ipwho.is",
+  "manifest-src 'self'", "worker-src 'self'", "base-uri 'self'", "form-action 'none'", "object-src 'none'",
+].join('; ');
+const csp = (): Plugin => ({
+  name: 'csp-meta',
+  apply: 'build',
+  transformIndexHtml: (html) => html.replace(/<meta charset="UTF-8">/, `$&\n<meta http-equiv="Content-Security-Policy" content="${CSP}">`),
+});
 
 export default defineConfig({
   plugins: [
+    csp(),
     react(),
     VitePWA({
       // 'prompt' = the new SW installs but waits for the user to confirm
